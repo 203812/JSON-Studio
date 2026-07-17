@@ -90,6 +90,7 @@ jobs:
         run: |
           export APPIMAGE_EXTRACT_AND_RUN=1
           export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          export OUTPUT=JSON-Studio-linux-x86_64.AppImage
           mkdir -p AppDir/usr/bin
           cp build/JsonStudio AppDir/usr/bin/
           curl -fL -o linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
@@ -100,7 +101,6 @@ jobs:
             --desktop-file packaging/linux/jsonstudio.desktop \
             --icon-file assets/logo/app-icon.png --icon-filename jsonstudio \
             --plugin qt --output appimage
-          mv JSON_Studio-*.AppImage JSON-Studio-linux-x86_64.AppImage
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

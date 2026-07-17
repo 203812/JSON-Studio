@@ -33,10 +33,14 @@ if(NOT yaml-cpp_FOUND)
     set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
     set(YAML_CPP_FORMAT_SOURCE OFF CACHE BOOL "" FORCE)
+    # yaml-cpp 0.8.0 declares cmake_minimum_required < 3.5, which CMake 4.x
+    # rejects. Tell CMake to apply 3.5-era policies to it.
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     FetchContent_Declare(yaml-cpp
         GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
         GIT_TAG 0.8.0)
     FetchContent_MakeAvailable(yaml-cpp)
+    unset(CMAKE_POLICY_VERSION_MINIMUM)
 endif()
 
 qt_add_executable(JsonStudio
