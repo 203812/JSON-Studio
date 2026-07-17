@@ -14,16 +14,29 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Network)
 qt_standard_project_setup()
 enable_testing()
 
-find_package(yaml-cpp REQUIRED)
+include(FetchContent)
 
+# Both dependencies fall back to FetchContent when not installed, so CI on any
+# platform only needs Qt + a compiler - no system package juggling.
 find_package(nlohmann_json 3.10 QUIET)
 if(NOT nlohmann_json_FOUND)
     message(STATUS "nlohmann_json not found locally - fetching")
-    include(FetchContent)
     FetchContent_Declare(nlohmann_json
         URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
         URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d)
     FetchContent_MakeAvailable(nlohmann_json)
+endif()
+
+find_package(yaml-cpp QUIET)
+if(NOT yaml-cpp_FOUND)
+    message(STATUS "yaml-cpp not found locally - fetching")
+    set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+    set(YAML_CPP_FORMAT_SOURCE OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG 0.8.0)
+    FetchContent_MakeAvailable(yaml-cpp)
 endif()
 
 qt_add_executable(JsonStudio
@@ -56,13 +69,26 @@ if(WIN32)
     target_sources(JsonStudio PRIVATE assets/logo/app.rc)
 endif()
 
+# macOS: bundle the .icns so Finder and the Dock show the logo.
+if(APPLE)
+    set(MACOSX_BUNDLE_ICON_FILE JsonStudio.icns)
+    set(app_icns ${CMAKE_CURRENT_SOURCE_DIR}/assets/logo/JsonStudio.icns)
+    set_source_files_properties(${app_icns} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    target_sources(JsonStudio PRIVATE ${app_icns})
+endif()
+
 target_include_directories(JsonStudio PRIVATE src)
 target_link_libraries(JsonStudio PRIVATE Qt6::Widgets Qt6::Network nlohmann_json::nlohmann_json yaml-cpp::yaml-cpp)
 target_compile_definitions(JsonStudio PRIVATE JSONSTUDIO_VERSION="${PROJECT_VERSION}")
 
-# Console window in Debug (qDebug output), windowed app otherwise.
+# Windowed app on Windows (no console) except in Debug; a real .app on macOS.
 set_target_properties(JsonStudio PROPERTIES
     WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+    MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_BUNDLE_NAME "JSON Studio"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "com.github.203812.jsonstudio"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
 )
 
 # Tests cover core/ only - no Widgets, no display needed.

@@ -1,0 +1,131 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# Superseded runs on the same ref cancel themselves.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+          - name: linux
+            os: ubuntu-22.04
+          - name: macos
+            os: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.3'
+          cache: true
+
+      - name: Provide CMake + Ninja
+        uses: lukka/get-cmake@latest
+
+      # Ninja needs the MSVC toolchain visible in the environment.
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # Qt on Linux needs these system libraries to configure and to deploy.
+      - name: Install Linux system libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+            libvulkan-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      # ---- Package: Windows -------------------------------------------------
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $stage = "stage/JSON-Studio"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item build/JsonStudio.exe $stage
+          Copy-Item README.md $stage
+          New-Item -ItemType Directory -Force -Path "$stage/samples" | Out-Null
+          Copy-Item samples/* "$stage/samples"
+          windeployqt --release --no-translations --no-opengl-sw --compiler-runtime "$stage/JsonStudio.exe"
+          Compress-Archive -Path "$stage/*" -DestinationPath JSON-Studio-windows-x64.zip -Force
+
+      # ---- Package: macOS ---------------------------------------------------
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          macdeployqt build/JsonStudio.app -always-overwrite
+          ditto -c -k --keepParent build/JsonStudio.app JSON-Studio-macos.zip
+
+      # ---- Package: Linux (AppImage) ---------------------------------------
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          mkdir -p AppDir/usr/bin
+          cp build/JsonStudio AppDir/usr/bin/
+          curl -fL -o linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fL -o linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy linuxdeploy-plugin-qt
+          ./linuxdeploy --appdir AppDir \
+            --executable build/JsonStudio \
+            --desktop-file packaging/linux/jsonstudio.desktop \
+            --icon-file assets/logo/app-icon.png --icon-filename jsonstudio \
+            --plugin qt --output appimage
+          mv JSON_Studio-*.AppImage JSON-Studio-linux-x86_64.AppImage
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JSON-Studio-${{ matrix.name }}
+          path: |
+            JSON-Studio-windows-x64.zip
+            JSON-Studio-macos.zip
+            JSON-Studio-linux-x86_64.AppImage
+          if-no-files-found: ignore
+
+  # Tag pushes get a GitHub release with all three builds attached.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

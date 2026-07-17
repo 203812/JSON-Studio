@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=JSON Studio
+Comment=Meer dan een formatter
+Exec=JsonStudio %F
+Icon=jsonstudio
+Categories=Development;Utility;TextEditor;
+Terminal=false
+MimeType=application/json;application/x-yaml;text/x-yaml;
