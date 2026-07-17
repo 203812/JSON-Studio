@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(JsonStudio VERSION 0.2.0 LANGUAGES CXX)
+project(JsonStudio VERSION 0.2.1 LANGUAGES CXX)
 
 # The .rc carries the executable's Windows icon (Explorer, taskbar, shortcut).
 if(WIN32)
