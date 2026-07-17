@@ -1,0 +1,16 @@
+build/
+build-*/
+dist/
+.cache/
+compile_commands.json
+*.user
+
+# Regenerable logo intermediates (keep icon.ico, app-icon.png, the SVGs).
+assets/logo/icon-*.png
+assets/logo/up*.png
+assets/logo/smallcheck.png
+assets/logo/sheet.png
+assets/logo/_sheet.svg
+assets/logo/banner-preview.png
+assets/logo/banner-check.png
+assets/logo/_banner_preview.svg

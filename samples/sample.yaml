@@ -1,0 +1,47 @@
+# JSON Studio - YAML sample
+# Exercises the bits of the highlighter that have real state.
+name: JSON Studio
+version: "0.1.0"        # quoted: must stay a string, not become a float
+zip: "01234"            # quoted: plain 01234 would read back as octal 668
+active: true
+successor: null
+missing: ~
+
+release:
+  date: 2026-07-16
+  channel: dev
+  downloads: 14238
+  rating: 4.8
+  tags: [editor, json, yaml, schema]
+
+features:
+  - id: 1
+    title: Format & minify
+    shortcut: Ctrl+Shift+F
+    done: true
+  - id: 2
+    title: JSON vergelijken
+    shortcut: null
+    done: false
+
+# Block scalar: every deeper-indented line below is literal text,
+# including this one -> "key: value" must NOT highlight as a key.
+description: |
+  Niet zomaar een formatter.
+  key: this is literal text, not a mapping
+  # and this is not a comment either
+
+folded: >
+  Deze regels worden
+  samengevoegd tot één regel.
+
+defaults: &defaults
+  adapter: postgres
+  encoding: utf8
+
+development:
+  <<: *defaults
+  database: studio_dev
+
+empty_map: {}
+empty_list: []

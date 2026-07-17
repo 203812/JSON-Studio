@@ -1,0 +1,3 @@
+// Windows icon resource. Icon id 1 is what Explorer, the taskbar and desktop
+// shortcuts pick for the executable. icon.ico is multi-resolution (16-256px).
+1 ICON "icon.ico"
