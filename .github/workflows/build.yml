@@ -25,7 +25,7 @@ jobs:
           - name: linux
             os: ubuntu-22.04
           - name: macos
-            os: macos-latest
+            os: macos-14
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +36,12 @@ jobs:
           # 6.8+ drops the AGL framework that newer macOS SDKs removed.
           version: '6.8.2'
           cache: true
+
+      # The macOS 15 SDK removed the AGL framework that Qt's CMake config still
+      # references; an older Xcode's SDK still ships it, so the link succeeds.
+      - name: Select older Xcode (macOS)
+        if: runner.os == 'macOS'
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
       - name: Provide CMake + Ninja
         uses: lukka/get-cmake@latest
